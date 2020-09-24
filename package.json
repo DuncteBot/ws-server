@@ -1,0 +1,21 @@
+{
+    "name": "ws-server",
+    "version": "1.0.0",
+    "type": "module",
+    "description": "the websocket server for dunctebot",
+    "main": "src/index.js",
+    "repository": "https://github.com/DuncteBot/ws-server",
+    "author": "duncte123",
+    "license": "MIT",
+    "scripts": {
+        "start": "node src/index.js"
+    },
+    "dependencies": {
+        "dotenv": "^8.2.0",
+        "ky": "^0.23.0",
+        "ws": "^7.3.1"
+    },
+    "optionalDependencies": {
+        "utf-8-validate": "^5.0.2"
+    }
+}

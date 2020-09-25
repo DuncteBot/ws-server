@@ -1,9 +1,10 @@
 import websocket from 'ws';
 import http from 'http';
 import dotenv from 'dotenv';
-import { verifyToken } from 'duncteApi';
+import { init as initApi, verifyToken } from './duncteApi.js';
 
 dotenv.config();
+initApi();
 
 // sets of websocket clients
 const bots = new Set();
@@ -21,18 +22,30 @@ const server = new websocket.Server({
 // else do nothing and ignore
 
 server.on('connection', (ws, req) => {
-    ws.on('message', (data) => {
-        console.log(data);
+    console.log(`a ${ws.xDuncteBot} connected, ${JSON.stringify(req)}`);
 
-        ws.close();
+    ws.on('message', function handler(data) {
+        if (dashboards.has(this)) {
+            bots.forEach((bot) => {
+                bot.send(data);
+            });
+        } else if (bots.has(this)) {
+            dashboards.forEach((dash) => {
+                dash.send(data);
+            });
+        }
+    });
+
+    ws.on('close', function (code, reason) {
+        console.log(`${this.xDuncteBot} closed with code ${code} and reason "${reason}"`);
+
+        bots.delete(this);
+        dashboards.delete(this);
     });
 });
 
 httpServer.on('upgrade', async (request, socket, head) => {
-    console.log(request.headers);
-
     const { authorization, 'x-dunctebot': xDuncteBot } = request.headers;
-
     const verified = await verifyToken(authorization)
 
     if (!verified) {

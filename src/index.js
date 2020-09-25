@@ -1,8 +1,10 @@
-import { Server } from 'ws';
+import websocket from 'ws';
 import http from 'http';
 import dotenv from 'dotenv';
+import { init as initApi, verifyToken } from './duncteApi.js';
 
 dotenv.config();
+initApi();
 
 // sets of websocket clients
 const bots = new Set();
@@ -10,18 +12,61 @@ const dashboards = new Set();
 
 const httpServer = http.createServer();
 
-const server = new Server({
+const server = new websocket.Server({
     noServer: true,
     clientTracking: false,
 });
 
+// if message is from bot, send to dashboards
+// else if message is from dashboard, send message to bots
+// else do nothing and ignore
+
+server.on('connection', (ws, req) => {
+    console.log(`a ${ws.xDuncteBot} connected, ${JSON.stringify(req)}`);
+
+    ws.on('message', function handler(data) {
+        if (dashboards.has(this)) {
+            bots.forEach((bot) => {
+                bot.send(data);
+            });
+        } else if (bots.has(this)) {
+            dashboards.forEach((dash) => {
+                dash.send(data);
+            });
+        }
+    });
+
+    ws.on('close', function (code, reason) {
+        console.log(`${this.xDuncteBot} closed with code ${code} and reason "${reason}"`);
+
+        bots.delete(this);
+        dashboards.delete(this);
+    });
+});
+
 httpServer.on('upgrade', async (request, socket, head) => {
-    // TODO: validate autorisation header
-    // use header to check if it's a bot or a dashboard connecting
-    console.log(request);
+    const { authorization, 'x-dunctebot': xDuncteBot } = request.headers;
+    const verified = await verifyToken(authorization)
+
+    if (!verified) {
+        socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+        socket.destroy();
+        return;
+    }
 
     // authenticate
     server.handleUpgrade(request, socket, head, (ws) => {
+        ws.xDuncteBot = xDuncteBot;
+
+        if (xDuncteBot === 'bot') {
+            bots.add(ws);
+        } else if (xDuncteBot === 'dashboard') {
+            dashboards.add(ws);
+        } else {
+            ws.terminate();
+            return;
+        }
+
         server.emit('connection', ws, request);
     });
 });

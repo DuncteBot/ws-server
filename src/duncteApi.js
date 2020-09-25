@@ -1,15 +1,24 @@
-import ky from 'ky';
+import axios from 'axios';
 
-const api = ky.create({
-    prefixUrl: 'https://apis.duncte123.me/'
-});
+export function init() {
+    axios.defaults.headers['Authorization'] = process.env.TOKEN;
+    axios.defaults.baseURL = 'https://apis.duncte123.me/';
+    // axios.defaults.baseURL = 'http://duncte123-apis-lumen.test/';
+}
 
 export async function verifyToken(token) {
-    const parsed = await api.get('/bot/verify-token', {
-        searchParams: {
-            the_token: token
-        }
-    }).json();
+    try {
+        const { data } = await axios.get('/bot/validate-token', {
+            params: {
+                the_token: token,
+                bot_routes: true,
+            }
+        });
 
-    return parsed.success;
+        return data.success;
+    } catch (e) {
+        console.log(e.response);
+
+        return false;
+    }
 }

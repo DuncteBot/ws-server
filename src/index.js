@@ -22,7 +22,7 @@ const server = new websocket.Server({
 // else do nothing and ignore
 
 server.on('connection', (ws, req) => {
-    console.log(`a ${ws.xDuncteBot} connected, ${JSON.stringify(req)}`);
+    console.log(`a ${ws.xDuncteBot} connected, ${req}`);
 
     ws.on('message', function handler(data) {
         if (dashboards.has(this)) {

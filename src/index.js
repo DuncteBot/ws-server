@@ -27,10 +27,12 @@ server.on('connection', (ws, req) => {
 
     ws.on('message', function handler(data) {
         if (dashboards.has(this)) {
+            console.log(`Dashboard broadcast: ${JSON.stringify(data)}`);
             bots.forEach((bot) => {
                 bot.send(data);
             });
         } else if (bots.has(this)) {
+            console.log(`Bot broadcast: ${JSON.stringify(data)}`);
             dashboards.forEach((dash) => {
                 dash.send(data);
             });

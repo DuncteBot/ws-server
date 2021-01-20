@@ -1,0 +1,11 @@
+version: "3.7"
+services:
+    websocket:
+        container_name: dunctebot-websocket
+        build:
+            context: ./
+        ports:
+            - "8888:8888"
+        environment:
+            - PORT=8888
+            - TOKEN=

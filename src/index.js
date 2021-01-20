@@ -1,21 +1,21 @@
 import websocket from 'ws';
 import http from 'http';
-import dotenv from 'dotenv';
 import { init as initApi, verifyToken } from './duncteApi.js';
 
-dotenv.config();
 initApi();
 
 // sets of websocket clients
 const bots = new Set();
 const dashboards = new Set();
 
+// we're using a separate http server to handle the authorisation
 const httpServer = http.createServer();
-
 const server = new websocket.Server({
     noServer: true,
     clientTracking: false,
 });
+
+const dataRequests = {};
 
 // if message is from bot, send to dashboards
 // else if message is from dashboard, send message to bots
@@ -23,16 +23,33 @@ const server = new websocket.Server({
 
 server.on('connection', (ws, req) => {
     console.log(`a ${ws.xDuncteBot} connected`);
-    console.log(req);
 
     ws.on('message', function handler(data) {
         if (dashboards.has(this)) {
+
+            // setup a structure for fetching the data
+            if (data.t === 'FETCH_DATA') {
+                // we're storing the bot count here in case a bot gets added in the process
+                // and did not receive the event
+                dataRequests[data.d.identifier] = {
+                    botCount: bots.size,
+                    responses: [],
+                };
+            }
+
             console.log(`Dashboard broadcast: ${JSON.stringify(data)}`);
             bots.forEach((bot) => {
                 bot.send(data);
             });
         } else if (bots.has(this)) {
             console.log(`Bot broadcast: ${JSON.stringify(data)}`);
+
+            // collect all the responses from all bots
+            if (data.t === 'FETCH_DATA') {
+                handleDataCallback(data);
+                return;
+            }
+
             dashboards.forEach((dash) => {
                 dash.send(data);
             });
@@ -46,6 +63,56 @@ server.on('connection', (ws, req) => {
         dashboards.delete(this);
     });
 });
+
+function handleDataCallback(data) {
+    const identifier = data.d.identifier;
+    const dataReq = dataRequests[identifier];
+
+    // remove the identifier from the allBots part
+    delete data.d.identifier;
+
+    dataReq.responses.push(data.d)
+
+    // if we have a response from all bots we can send it to the dashboard
+    if (dataReq.responses.length === dataReq.botCount) {
+        const finalRequest = {
+            t: 'FETCH_DATA',
+            d: {
+                identifier,
+            },
+        };
+
+        // map all the requests into one
+        for (const res of dataReq.responses) {
+            // loop over all the top level keys
+            const topLevel = Object.keys(res);
+
+            for (const topKey of topLevel) {
+                if (Array.isArray(res[topKey])) {
+                    const toPut = finalRequest.d[topKey] ?? [];
+
+                    toPut.push(res[topKey]);
+
+                    finalRequest.d[topKey] = toPut;
+                    continue;
+                }
+
+                const toPut = finalRequest.d[topKey] ?? {};
+                const keys = Object.keys(res[topKey]);
+
+                for (const key of keys) {
+                    toPut[key] = res[topKey][key];
+                }
+
+                finalRequest.d[topKey] = toPut;
+            }
+        }
+
+        dashboards.forEach((dash) => {
+            dash.send(finalRequest);
+        });
+    }
+}
 
 httpServer.on('upgrade', async (request, socket, head) => {
     const { authorization, 'x-dunctebot': xDuncteBot } = request.headers;

@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 export function init() {
+    axios.defaults.headers['User-Agent'] = 'DuncteBot-WS-Server / dunctebot.com';
     axios.defaults.headers['Authorization'] = process.env.TOKEN;
     axios.defaults.baseURL = 'https://apis.duncte123.me/';
     // axios.defaults.baseURL = 'http://duncte123-apis-lumen.test/';

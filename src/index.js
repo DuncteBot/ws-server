@@ -25,6 +25,13 @@ server.on('connection', (ws, req) => {
     console.log(`a ${ws.xDuncteBot} connected`);
 
     ws.on('message', function handler(data) {
+        if (data.t === 'PING') {
+            ws.send(JSON.stringify({
+                t: 'PONG'
+            }));
+            return;
+        }
+
         if (dashboards.has(this)) {
 
             // setup a structure for fetching the data

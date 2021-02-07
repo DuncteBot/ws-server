@@ -24,7 +24,9 @@ const dataRequests = {};
 server.on('connection', (ws, req) => {
     console.log(`a ${ws.xDuncteBot} connected`);
 
-    ws.on('message', function handler(data) {
+    ws.on('message', function handler(rw) {
+        const data = JSON.parse(rw);
+
         if (data.t === 'PING') {
             ws.send(JSON.stringify({
                 t: 'PONG'
@@ -44,12 +46,12 @@ server.on('connection', (ws, req) => {
                 };
             }
 
-            console.log(`Dashboard broadcast: ${JSON.stringify(data)}`);
+            console.log(`Dashboard broadcast: ${rw}`);
             bots.forEach((bot) => {
-                bot.send(data);
+                bot.send(rw);
             });
         } else if (bots.has(this)) {
-            console.log(`Bot broadcast: ${JSON.stringify(data)}`);
+            console.log(`Bot broadcast: ${rw}`);
 
             // collect all the responses from all bots
             if (data.t === 'FETCH_DATA') {
@@ -58,7 +60,7 @@ server.on('connection', (ws, req) => {
             }
 
             dashboards.forEach((dash) => {
-                dash.send(data);
+                dash.send(rw);
             });
         }
     });
@@ -98,7 +100,7 @@ function handleDataCallback(data) {
                 if (Array.isArray(res[topKey])) {
                     const toPut = finalRequest.d[topKey] ?? [];
 
-                    toPut.push(res[topKey]);
+                    toPut.push(...res[topKey]);
 
                     finalRequest.d[topKey] = toPut;
                     continue;
@@ -114,9 +116,11 @@ function handleDataCallback(data) {
                 finalRequest.d[topKey] = toPut;
             }
         }
+        
+        console.log(JSON.stringify(finalRequest));
 
         dashboards.forEach((dash) => {
-            dash.send(finalRequest);
+            dash.send(JSON.stringify(finalRequest));
         });
     }
 }

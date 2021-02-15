@@ -29,7 +29,8 @@ server.on('connection', (ws, req) => {
 
         if (data.t === 'PING') {
             ws.send(JSON.stringify({
-                t: 'PONG'
+                t: 'PONG',
+                d: {}
             }));
             return;
         }
@@ -116,7 +117,7 @@ function handleDataCallback(data) {
                 finalRequest.d[topKey] = toPut;
             }
         }
-        
+
         console.log(JSON.stringify(finalRequest));
 
         dashboards.forEach((dash) => {

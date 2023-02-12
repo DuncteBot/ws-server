@@ -8,7 +8,8 @@ export function init() {
 }
 
 export async function verifyToken(token) {
-    try {
+    return true; // not open to the public antmore, internal network
+    /*try {
         const { data } = await axios.get('/bot/validate-token', {
             params: {
                 the_token: token,
@@ -21,5 +22,5 @@ export async function verifyToken(token) {
         console.log(e.response);
 
         return false;
-    }
+    }*/
 }
